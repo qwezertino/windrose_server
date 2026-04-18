@@ -87,7 +87,7 @@ echo "Launcher: ${SERVER_EXE} ${SERVER_ARGS}"
 case "${SERVER_EXE,,}" in
   *.bat|*.cmd)
     set +e
-    xvfb-run -a wine cmd /c "$SERVER_EXE" "${ARGS[@]}"
+    ionice -c 1 -n 0 nice -n -10 xvfb-run -a wine cmd /c "$SERVER_EXE" "${ARGS[@]}"
     rc=$?
     set -e
     echo "Server process exited with code ${rc}"
@@ -95,7 +95,7 @@ case "${SERVER_EXE,,}" in
     ;;
   *)
     set +e
-    xvfb-run -a wine "$SERVER_EXE" "${ARGS[@]}"
+    ionice -c 1 -n 0 nice -n -10 xvfb-run -a wine "$SERVER_EXE" "${ARGS[@]}"
     rc=$?
     set -e
     echo "Server process exited with code ${rc}"

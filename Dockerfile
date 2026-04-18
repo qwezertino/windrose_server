@@ -17,6 +17,7 @@ RUN dpkg --add-architecture i386 && \
       lib32gcc-s1 \
       lib32stdc++6 \
       procps \
+      util-linux \
       vim-tiny && \
     mkdir -pm755 /etc/apt/keyrings && \
     wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key && \
