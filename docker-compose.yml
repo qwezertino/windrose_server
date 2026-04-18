@@ -15,11 +15,17 @@ services:
       WINEPREFIX: ${WINEPREFIX:-/home/steam/windrose/pfx}
       WINEARCH: ${WINEARCH:-win64}
       WINEDEBUG: ${WINEDEBUG:--all}
+      WINEESYNC: ${WINEESYNC:-1}
+      WINEFSYNC: ${WINEFSYNC:-1}
     # Official guide: Windrose uses dynamic NAT punch-through (ICE/STUN).
     # Host mode avoids Docker bridge NAT side effects and port-guessing.
     network_mode: host
     volumes:
       - ./data:/home/steam/windrose
       - ./logs:/home/steam/logs
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
     stdin_open: true
     tty: true
