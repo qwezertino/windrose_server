@@ -116,8 +116,7 @@ fi
 echo "--- Initializing Wine prefix ---"
 
 init_wine_prefix() {
-  # Use Xvfb to satisfy software expecting a graphical environment.
-  timeout "${WINEBOOT_TIMEOUT_SECS}" xvfb-run -a wineboot --init >>"$WINEBOOT_LOG_FILE" 2>&1
+  timeout "${WINEBOOT_TIMEOUT_SECS}" wineboot --init >>"$WINEBOOT_LOG_FILE" 2>&1
 }
 
 if ! init_wine_prefix; then
@@ -168,11 +167,11 @@ echo "Launcher: ${SERVER_EXE} ${SERVER_ARGS}"
 
 case "${SERVER_EXE,,}" in
   *.bat|*.cmd)
-    ionice -c 1 -n 0 nice -n -10 xvfb-run -a wine cmd /c "$SERVER_EXE" "${ARGS[@]}" &
+    nice -n -10 wine cmd /c "$SERVER_EXE" "${ARGS[@]}" &
     WINE_PID=$!
     ;;
   *)
-    ionice -c 1 -n 0 nice -n -10 xvfb-run -a wine "$SERVER_EXE" "${ARGS[@]}" &
+    nice -n -10 wine "$SERVER_EXE" "${ARGS[@]}" &
     WINE_PID=$!
     ;;
 esac

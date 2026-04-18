@@ -6,6 +6,7 @@
 # Runtime server data and logs (generated after first run)
 data/
 logs/
+rocksdb-backup/
 
 # Local/editor/OS files
 .DS_Store

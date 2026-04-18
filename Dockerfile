@@ -2,16 +2,14 @@ FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install 32-bit support, Wine staging, Xvfb, and SteamCMD dependencies.
+# Install 32-bit support, Wine (stable), and SteamCMD dependencies.
 RUN dpkg --add-architecture i386 && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
       ca-certificates \
       wget \
       gnupg2 \
-      xvfb \
       winbind \
-      dbus-x11 \
       curl \
       unzip \
       lib32gcc-s1 \
@@ -20,11 +18,7 @@ RUN dpkg --add-architecture i386 && \
       util-linux \
       rsync \
       vim-tiny && \
-    mkdir -pm755 /etc/apt/keyrings && \
-    wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key && \
-    wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/noble/winehq-noble.sources && \
-    apt-get update && \
-    apt-get install -y --install-recommends winehq-staging && \
+    apt-get install -y wine && \
     mkdir -p /home/steam/steamcmd && \
     cd /home/steam/steamcmd && \
     wget -qO- "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz" | tar zxvf - && \
@@ -40,7 +34,7 @@ ENV WINEESYNC=1
 ENV WINEFSYNC=1
 ENV INSTALL_DIR=/home/steam/windrose
 ENV APP_ID=4129620
-ENV SERVER_EXE=StartServerForeground.bat
+ENV SERVER_EXE=R5/Binaries/Win64/WindroseServer-Win64-Shipping.exe
 ENV SERVER_ARGS=
 ENV SKIP_UPDATE=0
 
