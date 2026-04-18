@@ -1,0 +1,12 @@
+# Local environment overrides
+.env
+.env.*
+!.env.example
+
+# Runtime server data and logs (generated after first run)
+data/
+logs/
+
+# Local/editor/OS files
+.DS_Store
+Thumbs.db
