@@ -35,7 +35,7 @@ ENV WINEARCH=win64
 ENV WINEDEBUG=-all
 ENV INSTALL_DIR=/home/steam/windrose
 ENV APP_ID=4129620
-ENV SERVER_EXE=WindroseServer.exe
+ENV SERVER_EXE=StartServerForeground.bat
 ENV SERVER_ARGS=
 ENV SKIP_UPDATE=0
 

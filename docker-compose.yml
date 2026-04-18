@@ -8,8 +8,10 @@ services:
       TZ: ${TZ:-Europe/Kyiv}
       APP_ID: ${APP_ID:-4129620}
       SERVER_EXE: ${SERVER_EXE:-WindroseServer.exe}
-      SERVER_ARGS: ${SERVER_ARGS:-}
+      SERVER_ARGS: ${SERVER_ARGS:--log}
       SKIP_UPDATE: ${SKIP_UPDATE:-0}
+      AUTO_RECREATE_PREFIX: ${AUTO_RECREATE_PREFIX:-1}
+      WINEBOOT_TIMEOUT_SECS: ${WINEBOOT_TIMEOUT_SECS:-180}
       WINEPREFIX: ${WINEPREFIX:-/home/steam/windrose/pfx}
       WINEARCH: ${WINEARCH:-win64}
       WINEDEBUG: ${WINEDEBUG:--all}

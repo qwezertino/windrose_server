@@ -6,8 +6,10 @@ This setup runs the Windows version of the Windrose dedicated server inside Wine
 
 - `Dockerfile` installs Wine staging and SteamCMD.
 - `entrypoint.sh` updates the game on startup and launches the server.
-- `docker-compose.yml` defines ports, volumes, and environment variables.
+- `docker-compose.yml` defines networking, volumes, and environment variables.
 - `.env.example` contains tunable runtime settings.
+
+Default launcher is `WindroseServer.exe` with `-log` for stable foreground execution.
 
 ## Quick start
 
@@ -28,6 +30,27 @@ This setup runs the Windows version of the Windrose dedicated server inside Wine
    ```bash
    docker logs -f windrose_server
    ```
+
+## Makefile shortcuts
+
+You can use `make` wrappers instead of typing full docker compose commands.
+
+```bash
+make help
+make up-build
+make logs-f
+make restart
+make down
+```
+
+Additional useful targets:
+
+- `make config` - validate/render compose config
+- `make build` - build image
+- `make up` - start in detached mode
+- `make ps` - service status
+- `make stop` / `make start` - stop/start services
+- `make down-v` - remove named volumes too
 
 ## Volumes
 
@@ -85,3 +108,29 @@ So your progress and settings survive `docker compose down`.
 - First launch can take a long time because Wine and game assets are initialized.
 - If Steam app id or executable name changes, update `.env`.
 - If Wine errors on startup, check container logs and verify host supports running Docker with required kernel features.
+
+## Troubleshooting logs
+
+Container logs (main source):
+
+```bash
+docker logs -f windrose_server
+```
+
+Wine prefix init diagnostics written on host:
+
+```bash
+tail -f logs/wineboot.log
+```
+
+Entrypoint diagnostics written on host:
+
+```bash
+tail -f logs/entrypoint.log
+```
+
+If startup loops on prefix errors, force quick debug restart without Steam update:
+
+```bash
+SKIP_UPDATE=1 AUTO_RECREATE_PREFIX=1 docker compose up -d --build
+```
