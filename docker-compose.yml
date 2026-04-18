@@ -29,6 +29,8 @@ services:
     tmpfs:
       - /tmpfs/rocksdb:size=2G
     stop_grace_period: 30s
+    cap_add:
+      - SYS_NICE
     ulimits:
       nofile:
         soft: 1048576
