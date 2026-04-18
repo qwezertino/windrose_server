@@ -17,12 +17,18 @@ services:
       WINEDEBUG: ${WINEDEBUG:--all}
       WINEESYNC: ${WINEESYNC:-1}
       WINEFSYNC: ${WINEFSYNC:-1}
+      ROCKSDB_TMPFS: ${ROCKSDB_TMPFS:-0}
+      ROCKSDB_BACKUP_INTERVAL: ${ROCKSDB_BACKUP_INTERVAL:-300}
     # Official guide: Windrose uses dynamic NAT punch-through (ICE/STUN).
     # Host mode avoids Docker bridge NAT side effects and port-guessing.
     network_mode: host
     volumes:
       - ./data:/home/steam/windrose
       - ./logs:/home/steam/logs
+      - ./rocksdb-backup:/home/steam/rocksdb-backup
+    tmpfs:
+      - /tmpfs/rocksdb:size=2G
+    stop_grace_period: 30s
     ulimits:
       nofile:
         soft: 1048576

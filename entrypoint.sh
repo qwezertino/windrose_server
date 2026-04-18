@@ -13,6 +13,13 @@ WINEBOOT_LOG_FILE="${WINEBOOT_LOG_DIR}/wineboot.log"
 WINEBOOT_TIMEOUT_SECS="${WINEBOOT_TIMEOUT_SECS:-180}"
 ENTRYPOINT_LOG_FILE="${WINEBOOT_LOG_DIR}/entrypoint.log"
 
+# RocksDB tmpfs settings
+ROCKSDB_TMPFS="${ROCKSDB_TMPFS:-0}"
+ROCKSDB_BACKUP_INTERVAL="${ROCKSDB_BACKUP_INTERVAL:-300}"
+ROCKSDB_DIR="$INSTALL_DIR/R5/Saved/SaveProfiles/Default/RocksDB"
+ROCKSDB_RAM="/tmpfs/rocksdb"
+ROCKSDB_BACKUP="/home/steam/rocksdb-backup"
+
 # Avoid GUI installers (Mono/Gecko) blocking startup in headless containers.
 export WINEDLLOVERRIDES="mscoree,mshtml="
 
@@ -22,6 +29,73 @@ mkdir -p "$WINEBOOT_LOG_DIR"
 
 # Mirror entrypoint output to Docker logs and a persistent host-mounted file.
 exec > >(tee -a "$ENTRYPOINT_LOG_FILE") 2>&1
+
+# ── RocksDB tmpfs helpers ──────────────────────────────────────────────────────
+setup_rocksdb_tmpfs() {
+  echo "--- Setting up RocksDB on tmpfs ---"
+  mkdir -p "$ROCKSDB_RAM" "$ROCKSDB_BACKUP"
+
+  # If RocksDB dir is a real directory (not symlink), move data to backup first
+  if [[ -d "$ROCKSDB_DIR" && ! -L "$ROCKSDB_DIR" ]]; then
+    echo "Moving existing RocksDB data to backup..."
+    rsync -a --delete "$ROCKSDB_DIR/" "$ROCKSDB_BACKUP/"
+    rm -rf "$ROCKSDB_DIR"
+  fi
+
+  # Restore backup to tmpfs (RAM)
+  if [[ -d "$ROCKSDB_BACKUP" ]] && ls -A "$ROCKSDB_BACKUP" &>/dev/null; then
+    echo "Restoring RocksDB from backup to tmpfs..."
+    rsync -a "$ROCKSDB_BACKUP/" "$ROCKSDB_RAM/"
+    echo "Restored $(du -sh "$ROCKSDB_RAM" | cut -f1) to tmpfs"
+  fi
+
+  # Create parent dirs and symlink
+  mkdir -p "$(dirname "$ROCKSDB_DIR")"
+  ln -sfn "$ROCKSDB_RAM" "$ROCKSDB_DIR"
+  echo "RocksDB symlinked: $ROCKSDB_DIR -> $ROCKSDB_RAM"
+}
+
+backup_rocksdb() {
+  if [[ -d "$ROCKSDB_RAM" ]] && ls -A "$ROCKSDB_RAM" &>/dev/null; then
+    rsync -a --delete "$ROCKSDB_RAM/" "$ROCKSDB_BACKUP/"
+    echo "[$(date +%H:%M:%S)] RocksDB backed up ($(du -sh "$ROCKSDB_BACKUP" | cut -f1))"
+  fi
+}
+
+rocksdb_backup_loop() {
+  while true; do
+    sleep "$ROCKSDB_BACKUP_INTERVAL"
+    backup_rocksdb
+  done
+}
+
+# ── Graceful shutdown ──────────────────────────────────────────────────────────
+WINE_PID=""
+BACKUP_PID=""
+
+cleanup() {
+  echo "--- Graceful shutdown ---"
+
+  # Stop wine server
+  if [[ -n "$WINE_PID" ]] && kill -0 "$WINE_PID" 2>/dev/null; then
+    echo "Stopping Wine process (PID $WINE_PID)..."
+    kill -TERM "$WINE_PID"
+    wait "$WINE_PID" 2>/dev/null || true
+  fi
+
+  # Final RocksDB backup
+  if [[ "$ROCKSDB_TMPFS" == "1" ]]; then
+    echo "Final RocksDB backup..."
+    backup_rocksdb
+  fi
+
+  # Kill background jobs
+  kill "$BACKUP_PID" 2>/dev/null || true
+  echo "Shutdown complete."
+  exit 0
+}
+
+trap cleanup SIGTERM SIGINT
 
 if [[ ! -x "$STEAMCMD" ]]; then
   echo "SteamCMD not found or not executable: ${STEAMCMD}"
@@ -82,23 +156,37 @@ else
   ARGS=()
 fi
 
+# Set up RocksDB tmpfs if enabled
+if [[ "$ROCKSDB_TMPFS" == "1" ]]; then
+  setup_rocksdb_tmpfs
+  rocksdb_backup_loop &
+  BACKUP_PID=$!
+  echo "RocksDB backup loop started (every ${ROCKSDB_BACKUP_INTERVAL}s, PID $BACKUP_PID)"
+fi
+
 echo "Launcher: ${SERVER_EXE} ${SERVER_ARGS}"
 
 case "${SERVER_EXE,,}" in
   *.bat|*.cmd)
-    set +e
-    ionice -c 1 -n 0 nice -n -10 xvfb-run -a wine cmd /c "$SERVER_EXE" "${ARGS[@]}"
-    rc=$?
-    set -e
-    echo "Server process exited with code ${rc}"
-    exit "$rc"
+    ionice -c 1 -n 0 nice -n -10 xvfb-run -a wine cmd /c "$SERVER_EXE" "${ARGS[@]}" &
+    WINE_PID=$!
     ;;
   *)
-    set +e
-    ionice -c 1 -n 0 nice -n -10 xvfb-run -a wine "$SERVER_EXE" "${ARGS[@]}"
-    rc=$?
-    set -e
-    echo "Server process exited with code ${rc}"
-    exit "$rc"
+    ionice -c 1 -n 0 nice -n -10 xvfb-run -a wine "$SERVER_EXE" "${ARGS[@]}" &
+    WINE_PID=$!
     ;;
 esac
+
+echo "Wine started (PID $WINE_PID)"
+wait "$WINE_PID" 2>/dev/null || true
+rc=$?
+echo "Server process exited with code ${rc}"
+
+# Final backup on normal exit (not signal)
+if [[ "$ROCKSDB_TMPFS" == "1" ]]; then
+  echo "Final RocksDB backup..."
+  backup_rocksdb
+fi
+
+kill "$BACKUP_PID" 2>/dev/null || true
+exit "$rc"
