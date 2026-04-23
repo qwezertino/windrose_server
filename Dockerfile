@@ -2,7 +2,7 @@ FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install 32-bit support, Wine (stable), and SteamCMD dependencies.
+# Install 32-bit support, Wine 10.x (WineHQ stable), and SteamCMD dependencies.
 RUN dpkg --add-architecture i386 && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -19,7 +19,11 @@ RUN dpkg --add-architecture i386 && \
       rsync \
       vim-tiny \
       xvfb && \
-    apt-get install -y wine && \
+    mkdir -pm755 /etc/apt/keyrings && \
+    wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key && \
+    wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/noble/winehq-noble.sources && \
+    apt-get update && \
+    apt-get install -y --install-recommends winehq-stable && \
     mkdir -p /home/steam/steamcmd && \
     cd /home/steam/steamcmd && \
     wget -qO- "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz" | tar zxvf - && \
