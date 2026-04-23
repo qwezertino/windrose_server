@@ -167,11 +167,11 @@ echo "Launcher: ${SERVER_EXE} ${SERVER_ARGS}"
 
 case "${SERVER_EXE,,}" in
   *.bat|*.cmd)
-    nice -n -10 wine cmd /c "$SERVER_EXE" "${ARGS[@]}" &
+    nice -n -10 xvfb-run -a -s "-screen 0 1024x768x24" wine cmd /c "$SERVER_EXE" "${ARGS[@]}" &
     WINE_PID=$!
     ;;
   *)
-    nice -n -10 wine "$SERVER_EXE" "${ARGS[@]}" &
+    nice -n -10 xvfb-run -a -s "-screen 0 1024x768x24" wine "$SERVER_EXE" "${ARGS[@]}" &
     WINE_PID=$!
     ;;
 esac

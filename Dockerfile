@@ -17,7 +17,8 @@ RUN dpkg --add-architecture i386 && \
       procps \
       util-linux \
       rsync \
-      vim-tiny && \
+      vim-tiny \
+      xvfb && \
     apt-get install -y wine && \
     mkdir -p /home/steam/steamcmd && \
     cd /home/steam/steamcmd && \
