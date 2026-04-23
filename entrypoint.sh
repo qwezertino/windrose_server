@@ -7,6 +7,10 @@ APP_ID="${APP_ID:-4129620}"
 SERVER_EXE="${SERVER_EXE:-R5/Binaries/Win64/WindroseServer-Win64-Shipping.exe}"
 SERVER_ARGS="${SERVER_ARGS:-}"
 SKIP_UPDATE="${SKIP_UPDATE:-0}"
+STEAM_USERNAME="${STEAM_USERNAME:-}"
+STEAM_PASSWORD="${STEAM_PASSWORD:-}"
+STEAM_GUARD_CODE="${STEAM_GUARD_CODE:-}"
+STEAMCMD_TIMEOUT_SECS="${STEAMCMD_TIMEOUT_SECS:-300}"
 AUTO_RECREATE_PREFIX="${AUTO_RECREATE_PREFIX:-1}"
 WINEBOOT_LOG_DIR="/home/steam/logs"
 WINEBOOT_LOG_FILE="${WINEBOOT_LOG_DIR}/wineboot.log"
@@ -102,13 +106,60 @@ if [[ ! -x "$STEAMCMD" ]]; then
   exit 1
 fi
 
-if [[ "$SKIP_UPDATE" != "1" ]]; then
-  echo "--- Starting SteamCMD update for app ${APP_ID} ---"
-  "$STEAMCMD" +@sSteamCmdForcePlatformType windows \
+run_steamcmd_update_anonymous() {
+  timeout "${STEAMCMD_TIMEOUT_SECS}" "$STEAMCMD" +@sSteamCmdForcePlatformType windows \
     +force_install_dir "$INSTALL_DIR" \
     +login anonymous \
     +app_update "$APP_ID" validate \
     +quit
+}
+
+run_steamcmd_update_auth() {
+  if [[ -n "$STEAM_GUARD_CODE" ]]; then
+    timeout "${STEAMCMD_TIMEOUT_SECS}" "$STEAMCMD" +@sSteamCmdForcePlatformType windows \
+      +force_install_dir "$INSTALL_DIR" \
+      +login "$STEAM_USERNAME" "$STEAM_PASSWORD" \
+      +set_steam_guard_code "$STEAM_GUARD_CODE" \
+      +app_update "$APP_ID" validate \
+      +quit
+  else
+    timeout "${STEAMCMD_TIMEOUT_SECS}" "$STEAMCMD" +@sSteamCmdForcePlatformType windows \
+      +force_install_dir "$INSTALL_DIR" \
+      +login "$STEAM_USERNAME" "$STEAM_PASSWORD" \
+      +app_update "$APP_ID" validate \
+      +quit
+  fi
+}
+
+if [[ "$SKIP_UPDATE" != "1" ]]; then
+  echo "--- Starting SteamCMD update for app ${APP_ID} ---"
+  if run_steamcmd_update_anonymous; then
+    echo "SteamCMD update succeeded with anonymous login."
+  else
+    rc=$?
+    if [[ "$rc" -eq 124 ]]; then
+      echo "Anonymous SteamCMD update timed out after ${STEAMCMD_TIMEOUT_SECS}s."
+    else
+      echo "Anonymous SteamCMD update failed for app ${APP_ID} (exit code ${rc})."
+    fi
+    if [[ -n "$STEAM_USERNAME" && -n "$STEAM_PASSWORD" ]]; then
+      echo "Retrying SteamCMD update with Steam account credentials..."
+      if run_steamcmd_update_auth; then
+        echo "SteamCMD update succeeded with account credentials."
+      else
+        rc=$?
+        if [[ "$rc" -eq 124 ]]; then
+          echo "SteamCMD update with account credentials timed out after ${STEAMCMD_TIMEOUT_SECS}s."
+        else
+          echo "SteamCMD update with account credentials failed (exit code ${rc})."
+        fi
+        exit 1
+      fi
+    else
+      echo "Set STEAM_USERNAME and STEAM_PASSWORD in environment to update non-anonymous app access."
+      exit 1
+    fi
+  fi
 else
   echo "--- SKIP_UPDATE=1, skipping SteamCMD update ---"
 fi
